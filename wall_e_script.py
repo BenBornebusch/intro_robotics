@@ -134,7 +134,7 @@ def find_color_black(frame):
         return False, result_cropped
 
 def going_to_charching():
-    bottom_frame = get_image_bottom()
+    bottom_frame = get_image_top()
     found_bottom, yellow_mask_bottom = find_color_yellow(bottom_frame)
     if not found_bottom:
         left_motor.run(1)
@@ -147,27 +147,24 @@ def going_to_charching():
         left_motor.run(1)
         right_motor.run(-1)
         return
-    if yellow_pixels[1].size > 3300:
-        return True
-    else:
-        # Use the mean x position of yellow pixels to estimate the center
-        cx = int(np.mean(yellow_pixels[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
-        width = yellow_mask_bottom.shape[1] # the width of the original image
-        center_x = width // 2 # center of the image
-        tolerance = width // 10  # 10% of image width
-        print(yellow_pixels[1].size)
-        if abs(cx - center_x) < tolerance:
-            left_motor.run(1)
-            right_motor.run(2)
-            
-        elif cx < center_x:
-            left_motor.run(0.5)
-            right_motor.run(1)
-        else:
-            left_motor.run(1)
-            right_motor.run(0.5)
 
-        return False
+    # Use the mean x position of yellow pixels to estimate the center
+    cx = int(np.mean(yellow_pixels[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
+    width = yellow_mask_bottom.shape[1] # the width of the original image
+    center_x = width // 2 # center of the image
+    tolerance = width // 10  # 10% of image width
+    print(yellow_pixels[1].size)
+    if abs(cx - center_x) < tolerance:
+        left_motor.run(1)
+        right_motor.run(1)
+            
+    elif cx < center_x:
+        left_motor.run(0.5)
+        right_motor.run(1)
+    else:
+        left_motor.run(1)
+        right_motor.run(0.5)
+
 
 def going_to_trash_cube():
     bottom_frame = get_image_bottom()
@@ -273,10 +270,14 @@ while True:
     image_top = get_image_top()
     image_bottom = get_image_bottom()
     
+    #opening the camera view
+    get_camera_views(image_top, image_bottom)
+    
     #stopping the loop
     if cv2.waitKey(1) == ord("q"):
         break
     cv2.waitKey(1)
+    
     
     coordinates = getting_coordinates_relative_to_robot("/Charging_Pad")
     
