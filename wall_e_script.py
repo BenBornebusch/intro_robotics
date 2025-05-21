@@ -38,10 +38,11 @@ def get_masked_image(frame, color):
     func_name = f"find_color_{color}"
     func = globals().get(func_name)
     if callable(func):
-        image = func(color)
+        image = func(frame)
         return image
     else:
         print(f"No function found for color: {color}")
+        
 #HELPER FUNCTION
 def show_image(image):
     plt.imshow(image)
@@ -124,15 +125,18 @@ def find_color_black(frame):
     mask = cv2.inRange(hsv, BLACK_LOWER, BLACK_UPPER)
 
     mask = cv2.inRange(hsv, BLACK_LOWER, BLACK_UPPER)
-    result = cv2.bitwise_and(frame, frame, mask=mask)
  
-    result_cropped = cropping_an_image(result, 30)
+    red_on_black = np.zeros_like(frame)
     
+    red_on_black[mask > 0] = (0, 0, 255)  
+
+    result_cropped = cropping_an_image(red_on_black, 30)
+
     if np.any(mask > 0):
         return True, result_cropped
     else:
         return False, result_cropped
-
+    
 def going_to_charching():
     bottom_frame = get_image_top()
     found_bottom, yellow_mask_bottom = find_color_yellow(bottom_frame)
@@ -165,9 +169,9 @@ def going_to_charching():
         left_motor.run(1)
         right_motor.run(0.5)
 
-
 def going_to_trash_cube():
     bottom_frame = get_image_bottom()
+    bottom_frame = cropping_an_image(bottom_frame)
     found_bottom, brown_mask_bottom = find_color_brown(bottom_frame)
     if not found_bottom:
         left_motor.run(1)
@@ -181,6 +185,10 @@ def going_to_trash_cube():
         right_motor.run(-1)
         return
     if brown_pixels[1].size > 3300:
+        print("skibidi")
+        for i in range(5):
+            left_motor.run(1)
+            right_motor.run(1)
         return True
     else:
         # Use the mean x position of yellow pixels to estimate the center
@@ -190,7 +198,7 @@ def going_to_trash_cube():
         tolerance = width // 10  # 10% of image width
         print(brown_pixels[1].size)
         if abs(cx - center_x) < tolerance:
-            left_motor.run(1)
+            left_motor.run(2)
             right_motor.run(2)
             
         elif cx < center_x:
@@ -203,8 +211,8 @@ def going_to_trash_cube():
         return False
 
 def going_to_compressed_cube():
-    bottom_frame = get_image_bottom()
-    found_bottom, black_mask_bottom = find_color_black(bottom_frame)
+    top_frame = get_image_top()
+    found_bottom, black_mask_bottom = find_color_black(top_frame)
     if not found_bottom:
         left_motor.run(1)
         right_motor.run(-1)
@@ -216,9 +224,12 @@ def going_to_compressed_cube():
         left_motor.run(1)
         right_motor.run(-1)
         return
-    if black_pixels[1].size > 3300:
+    if black_pixels[1].size > 300:
+        for i in range(5):
+            right_motor.run(1)
+            left_motor.run(1)
         return True
-    else:
+    elif 20 < black_pixels[1].size and black_pixels[1].size < 300:
         # Use the mean x position of yellow pixels to estimate the center
         cx = int(np.mean(black_pixels[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
         width = black_mask_bottom.shape[1] # the width of the original image
@@ -227,7 +238,7 @@ def going_to_compressed_cube():
         print(black_pixels[1].size)
         if abs(cx - center_x) < tolerance:
             left_motor.run(1)
-            right_motor.run(2)
+            right_motor.run(1)
             
         elif cx < center_x:
             left_motor.run(0.5)
@@ -236,6 +247,10 @@ def going_to_compressed_cube():
             left_motor.run(1)
             right_motor.run(0.5)
 
+        return False
+    else: 
+        left_motor.run(1)
+        right_motor.run(-1)
         return False
     
 def getting_coordinates_relative_to_robot(object):
@@ -270,8 +285,12 @@ while True:
     image_top = get_image_top()
     image_bottom = get_image_bottom()
     
+    #
+    found_bottom, masked_bottom = get_masked_image(image_bottom, "black")
+    found_top, masked_top = get_masked_image(image_top, "black")
+    image_top = cropping_an_image(image_top, 30)
     #opening the camera view
-    get_camera_views(image_top, image_bottom)
+    get_camera_views(image_top, masked_top)
     
     #stopping the loop
     if cv2.waitKey(1) == ord("q"):
@@ -279,15 +298,47 @@ while True:
     cv2.waitKey(1)
     
     
-    coordinates = getting_coordinates_relative_to_robot("/Charging_Pad")
     
-    if coordinates > 0.29:
-        print(coordinates)
-        going_to_charching()
-        
+    
+    if robot.get_battery() >= 0.90:
+        if going_to_trash_cube() == True:
+            right_motor.run(0)
+            left_motor.run(0)
+            robot.compress()
+            for i in range(10):
+                right_motor.run(1)
+                left_motor.run(1)
+            while True:
+                image_top = get_image_top()
+                image_bottom = get_image_bottom()
+                #
+                found_bottom, masked_bottom = get_masked_image(image_bottom, "black")
+                found_top, masked_top = get_masked_image(image_top, "black")
+                image_top = cropping_an_image(image_top, 30)
+                #opening the camera view
+                get_camera_views(image_top, masked_top)
+                
+                if cv2.waitKey(1) == ord("q"):
+                    break
+                cv2.waitKey(1)
+                
+                if going_to_compressed_cube() == True:
+                    left_motor.run(0)
+                    right_motor.run(0)
+                    break
+                else:
+                    going_to_compressed_cube()
+        else:
+            going_to_trash_cube()
     else:
-        left_motor.run(0)
-        right_motor.run(0)
+        while robot.get_battery != 1.0:
+            coordinates_charching = getting_coordinates_relative_to_robot("/Charging_Pad")
+            if coordinates_charching > 0.29:
+                going_to_charching()
+            else:
+                left_motor.run(0)
+                right_motor.run(0)
+                break
         
        
 
