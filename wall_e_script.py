@@ -245,8 +245,8 @@ def going_to_charching():
     tolerance = width // 10  # 10% of image width
     print(yellow_pixels[1].size)
     if abs(cx - center_x) < tolerance:
-        left_motor.run(1)
-        right_motor.run(1)
+        left_motor.run(3)
+        right_motor.run(3)
             
     elif cx < center_x:
         left_motor.run(0.5)
@@ -270,11 +270,11 @@ def going_to_trash_cube():
         left_motor.run(1)
         right_motor.run(-1)
         return
-    if brown_pixels[1].size > 3300:
+    if brown_pixels[1].size > 3400:
         print("skibidi")
-        for i in range(5):
-            left_motor.run(1)
-            right_motor.run(1)
+        for i in range(10):
+            left_motor.run(5)
+            right_motor.run(5)
         return True
     else:
         # Use the mean x position of yellow pixels to estimate the center
@@ -284,8 +284,8 @@ def going_to_trash_cube():
         tolerance = width // 10  # 10% of image width
         print(brown_pixels[1].size)
         if abs(cx - center_x) < tolerance:
-            left_motor.run(2)
-            right_motor.run(2)
+            left_motor.run(3)
+            right_motor.run(3)
             
         elif cx < center_x:
             left_motor.run(0.5)
@@ -312,8 +312,8 @@ def going_to_compressed_cube():
         return
     if black_pixels[1].size > 300:
         for i in range(5):
-            right_motor.run(1)
-            left_motor.run(1)
+            right_motor.run(5)
+            left_motor.run(5)
         return True
     elif 20 < black_pixels[1].size and black_pixels[1].size < 300:
         # Use the mean x position of yellow pixels to estimate the center
@@ -334,10 +334,7 @@ def going_to_compressed_cube():
             right_motor.run(0.5)
 
         return False
-    else: 
-        left_motor.run(1)
-        right_motor.run(-1)
-        return False
+    
     
 def getting_coordinates_relative_to_robot(object):
     handle_ob = sim.getObject(object)
@@ -365,6 +362,8 @@ time.sleep(0.5)
 # MAIN LOOP
 while True:
     # Get battery level
+    left_motor.run(1)
+    right_motor.run(-1)
     print(f"Battery: {robot.get_battery():.2f}")
     
     #getting image top and bottom
@@ -372,8 +371,8 @@ while True:
     image_bottom = get_image_bottom()
     
     #
-    found_bottom, masked_bottom = get_masked_image(image_bottom, "blue")
-    found_top, masked_top = get_masked_image(image_top, "blue")
+    found_bottom, masked_bottom = get_masked_image(image_bottom, "red")
+    found_top, masked_top = get_masked_image(image_top, "red")
 
     #opening the camera view
     get_camera_views(image_top, masked_bottom)
@@ -382,7 +381,7 @@ while True:
     if cv2.waitKey(1) == ord("q"):
         break
     cv2.waitKey(1)
-    
+    '''
     
     if robot.get_battery() >= 0.90:
         bottom_frame = get_image_bottom()
@@ -393,22 +392,9 @@ while True:
                 left_motor.run(0)
                 robot.compress()
                 for i in range(10):
-                    right_motor.run(1)
-                    left_motor.run(1)
+                    right_motor.run(5)
+                    left_motor.run(5)
                 while True:
-                    image_top = get_image_top()
-                    image_bottom = get_image_bottom()
-                    
-                    found_bottom, masked_bottom = get_masked_image(image_bottom, "black")
-                    found_top, masked_top = get_masked_image(image_top, "black")
-                    image_top = cropping_an_image(image_top, 30)
-            
-                    get_camera_views(image_top, masked_top)
-                    
-                    if cv2.waitKey(1) == ord("q"):
-                        break
-                    cv2.waitKey(1)
-                    
                     if going_to_compressed_cube() == True:
                         left_motor.run(0)
                         right_motor.run(0)
@@ -417,28 +403,18 @@ while True:
                         going_to_compressed_cube()
             else:
                 while going_to_trash_cube() == False:
-                    image_top = get_image_top()
-                    image_bottom = get_image_bottom()
-                    
-                    found_bottom, masked_bottom = get_masked_image(image_bottom, "brown")
-                    found_top, masked_top = get_masked_image(image_top, "brown")
-            
-                    get_camera_views(image_top, masked_top)
-                    
                     going_to_trash_cube()
         else:
             while going_to_green_cube() == False:
-                image_top = get_image_top()
-                image_bottom = get_image_bottom()
-                    
-                found_bottom, masked_bottom = get_masked_image(image_bottom, "green")
-                found_top, masked_top = get_masked_image(image_top, "green")
-            
-                get_camera_views(image_top, masked_top)
-                     
                 going_to_green_cube()
-            left_motor.run(0)
-            right_motor.run(0)
+            
+            if going_to_blue_container == True:
+                right_motor.run(0)
+                left_motor.run(0)
+                
+            else:
+                while going_to_blue_container == False:
+                    going_to_blue_container()
         
     else:
         while robot.get_battery != 1.0:
@@ -449,7 +425,7 @@ while True:
                 left_motor.run(0)
                 right_motor.run(0)
                 break
-    
+    '''
        
 
 
