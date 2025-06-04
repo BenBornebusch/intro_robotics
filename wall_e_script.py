@@ -118,6 +118,21 @@ def find_color_blue(frame):
     else:
         return False, result
 
+def find_color_red(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    RED_LOWER = np.array([0, 100, 100])
+    RED_UPPER = np.array([10, 255, 255])
+
+
+    mask = cv2.inRange(hsv, RED_LOWER, RED_UPPER)
+    result = cv2.bitwise_and(frame, frame, mask=mask)
+ 
+    if np.any(mask > 0):
+        return True, result
+    else:
+        return False, result
+    
+
 def find_color_brown(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     BROWN_LOWER = np.array([10, 150, 50])
@@ -187,29 +202,67 @@ def going_to_green_cube():
 
         return False
 
-def going_to_blue_container():
+def going_to_red_container():
     bottom_frame = get_image_bottom()
-    found_bottom, blue_mask_bottom = find_color_blue(bottom_frame)
-    if not found_bottom:
+    top_frame = get_image_top()
+    found_bottom, red_mask_bottom = find_color_red(bottom_frame)
+    found_top, red_mask_top = find_color_red(top_frame)
+    
+    if not found_top:
         left_motor.run(1)
         right_motor.run(-1)
         return
     
     # Find the horizontal (x) positions of yellow pixels
-    blue_pixels = np.where(cv2.cvtColor(blue_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
-    if blue_pixels[1].size > 3300:
-        print("skibidi")
-        for i in range(5):
-            left_motor.run(1)
-            right_motor.run(1)
+    red_pixels_bottom = np.where(cv2.cvtColor(red_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
+    red_pixels_top = np.where(cv2.cvtColor(red_mask_top, cv2.COLOR_BGR2GRAY) > 0)
+    
+    if red_pixels_bottom[1].size > 3000:
         return True
     else:
         # Use the mean x position of yellow pixels to estimate the center
-        cx = int(np.mean(blue_pixels[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
+        cx = int(np.mean(red_pixels_top[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
+        width = red_mask_top.shape[1] # the width of the original image
+        center_x = width // 2 # center of the image
+        tolerance = width // 10  # 10% of image width
+        print(red_pixels_top[1].size)
+        if abs(cx - center_x) < tolerance:
+            left_motor.run(3)
+            right_motor.run(3)
+            
+        elif cx < center_x:
+            left_motor.run(0.5)
+            right_motor.run(1)
+        else:
+            left_motor.run(1)
+            right_motor.run(0.5)
+
+        return False
+
+    
+def going_to_blue_container():
+    bottom_frame = get_image_bottom()
+    top_frame = get_image_top()
+    found_bottom, blue_mask_bottom = find_color_blue(bottom_frame)
+    found_top, blue_mask_top = find_color_blue(top_frame)
+    if not found_top:
+        left_motor.run(1)
+        right_motor.run(-1)
+        return
+    
+    # Find the horizontal (x) positions of yellow pixels
+    blue_pixels_bottom = np.where(cv2.cvtColor(blue_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
+    blue_pixels_top = np.where(cv2.cvtColor(blue_mask_top, cv2.COLOR_BGR2GRAY) > 0)
+    
+    if blue_pixels_bottom[1].size > 3300:
+        return True
+    else:
+        # Use the mean x position of yellow pixels to estimate the center
+        cx = int(np.mean(blue_pixels_top[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
         width = blue_mask_bottom.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(blue_pixels[1].size)
+        print(blue_pixels_top[1].size)
         if abs(cx - center_x) < tolerance:
             left_motor.run(2)
             right_motor.run(2)
@@ -298,40 +351,43 @@ def going_to_trash_cube():
 
 def going_to_compressed_cube():
     top_frame = get_image_top()
-    found_bottom, black_mask_bottom = find_color_black(top_frame)
-    if not found_bottom:
+    bottom_frame = get_image_bottom()
+    foubd_top, black_mask_top = find_color_black(top_frame)
+    found_bottom, black_mask_bottom = find_color_black(bottom_frame)
+    
+    if not foubd_top:
         left_motor.run(1)
         right_motor.run(-1)
         return
     
     # Find the horizontal (x) positions of yellow pixels
-    black_pixels = np.where(cv2.cvtColor(black_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
-    if black_pixels[1].size == 0:
+    black_pixels_top = np.where(cv2.cvtColor(black_mask_top, cv2.COLOR_BGR2GRAY) > 0)
+    black_pixels_bottom = np.where(cv2.cvtColor(black_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
+    if black_pixels_top[1].size == 0:
         left_motor.run(1)
         right_motor.run(-1)
         return
-    if black_pixels[1].size > 300:
-        for i in range(5):
-            right_motor.run(5)
-            left_motor.run(5)
+    if black_pixels_top[1].size > 500:
         return True
-    elif 20 < black_pixels[1].size and black_pixels[1].size < 300:
+    else:
+        if black_pixels_bottom[1].size > 1000:
+            return True
         # Use the mean x position of yellow pixels to estimate the center
-        cx = int(np.mean(black_pixels[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
-        width = black_mask_bottom.shape[1] # the width of the original image
+        cx = int(np.mean(black_pixels_top[1])) # yellow_pixels[1] gives back the x-ccordinates of the yellow pixels, with mean it calculates the average pixel coordinate
+        width = black_mask_top.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(black_pixels[1].size)
+        print(black_pixels_top[1].size)
         if abs(cx - center_x) < tolerance:
             left_motor.run(1)
             right_motor.run(1)
             
         elif cx < center_x:
-            left_motor.run(0.5)
+            left_motor.run(0.25)
             right_motor.run(1)
         else:
             left_motor.run(1)
-            right_motor.run(0.5)
+            right_motor.run(0.25)
 
         return False
     
@@ -353,19 +409,95 @@ def get_camera_views(frame_a, frame_b):
     cv2.resizeWindow("Combined Camera View", 1200, 500)
     cv2.imshow("Combined Camera View", combined)
 
+def turn_of_180():
+    for i in range(55):
+        left_motor.run(3)
+        right_motor.run(-3)
 
+def going_to_small_black_cube():
+    bottom_frame = get_image_bottom()
+    # Crop to focus on the lower part of the image (avoid sky)
+    cropped = cropping_an_image(bottom_frame, crop_rows=bottom_frame.shape[0] // 3)
+    found, black_mask = find_color_black(cropped)
+    if not found:
+        left_motor.run(1)
+        right_motor.run(-1)
+        return
+
+    black_pixels = np.where(cv2.cvtColor(black_mask, cv2.COLOR_BGR2GRAY) > 0)
+    if black_pixels[1].size == 0:
+        left_motor.run(1)
+        right_motor.run(-1)
+        return
+
+    # Thresholds for "small" black cube (adjust as needed)
+    if 30 < black_pixels[1].size < 820:
+        cx = int(np.mean(black_pixels[1]))
+        width = black_mask.shape[1]
+        center_x = width // 2
+        tolerance = width // 10
+        print("Black pixels:", black_pixels[1].size)
+        if abs(cx - center_x) < tolerance:
+            left_motor.run(1)
+            right_motor.run(1)
+        elif cx < center_x:
+            left_motor.run(0.5)
+            right_motor.run(1)
+        else:
+            left_motor.run(1)
+            right_motor.run(0.5)
+        return False
+    elif black_pixels[1].size >= 820:
+        left_motor.run(0)
+        right_motor.run(0)
+        return True
+    else:
+        left_motor.run(1)
+        right_motor.run(-1)
+        return False
 
 # Starts simulation
 sim.startSimulation()
 time.sleep(0.5)
 
+
+
 # MAIN LOOP
 while True:
+    '''
     # Get battery level
-    left_motor.run(1)
-    right_motor.run(-1)
+    if going_to_trash_cube() == True:
+        right_motor.run(0)
+        left_motor.run(0)
+        robot.compress()
+        for i in range(10):
+            right_motor.run(5)
+            left_motor.run(5)
+        turn_of_180()
+        
+        while not going_to_small_black_cube():
+            print("going compressed cube")
+            going_to_small_black_cube()
+        while True:
+                print("going to container")
+                if going_to_red_container() == True:
+                    print("Hello")
+                    for i in range(10):
+                        right_motor.run(-5)
+                        left_motor.run(-5)
+                    break
+                else:
+                    while not going_to_red_container:
+                        going_to_red_container()    
+            
+                
+    else:
+        while going_to_trash_cube() == False:
+            going_to_trash_cube()
+    '''        
+            
     print(f"Battery: {robot.get_battery():.2f}")
-    
+    '''
     #getting image top and bottom
     image_top = get_image_top()
     image_bottom = get_image_bottom()
@@ -394,13 +526,23 @@ while True:
                 for i in range(10):
                     right_motor.run(5)
                     left_motor.run(5)
+                turn_of_180()
+                
+                while not going_to_small_black_cube():
+                    print("going compressed cube")
+                    going_to_small_black_cube()
+                    
                 while True:
-                    if going_to_compressed_cube() == True:
-                        left_motor.run(0)
-                        right_motor.run(0)
-                        break
-                    else:
-                        going_to_compressed_cube()
+                        print("going to container")
+                        if going_to_red_container() == True:
+                            print("Hello")
+                            for i in range(10):
+                                right_motor.run(-5)
+                                left_motor.run(-5)
+                            break
+                        else:
+                            while not going_to_red_container:
+                                going_to_red_container()    
             else:
                 while going_to_trash_cube() == False:
                     going_to_trash_cube()
@@ -425,9 +567,7 @@ while True:
                 left_motor.run(0)
                 right_motor.run(0)
                 break
-    '''
-       
-
-
-
-
+    
+    
+    
+  
