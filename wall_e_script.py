@@ -117,7 +117,7 @@ def find_color_blue(frame):
         return True, result
     else:
         return False, result
-
+'''
 def find_color_red(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     RED_LOWER = np.array([0, 100, 100])
@@ -131,10 +131,35 @@ def find_color_red(frame):
         return True, result
     else:
         return False, result
-    
+'''    
+
+def find_color_red(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    lower_red1 = np.array([0, 150, 120])
+    upper_red1 = np.array([10, 255, 255])
+
+    lower_red2 = np.array([170, 150, 120])
+    upper_red2 = np.array([180, 255, 255])
+
+    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+
+    mask = cv2.bitwise_or(mask1, mask2)
+    result = cv2.bitwise_and(frame, frame, mask=mask)
+
+    if np.any(mask > 0):
+        return True, result
+    else:
+        return False, result
 
 def find_color_brown(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    '''
+    BROWN_LOWER = np.array([10, 80, 50]) #sadly it recognizes the charging thingy
+    BROWN_UPPER = np.array([30, 255, 200])
+    '''
+    
     BROWN_LOWER = np.array([10, 150, 50])
     BROWN_UPPER = np.array([25, 255, 150])
 
@@ -188,7 +213,7 @@ def going_to_green_cube():
         width = green_mask_bottom.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(green_pixels[1].size)
+        print("green pixels sighted: " + str(green_pixels[1].size))
         if abs(cx - center_x) < tolerance:
             left_motor.run(2)
             right_motor.run(2)
@@ -225,7 +250,7 @@ def going_to_red_container():
         width = red_mask_top.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(red_pixels_top[1].size)
+        print("red pixels sighted: " + str(red_pixels_top[1].size))
         if abs(cx - center_x) < tolerance:
             left_motor.run(3)
             right_motor.run(3)
@@ -262,7 +287,7 @@ def going_to_blue_container():
         width = blue_mask_bottom.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(blue_pixels_top[1].size)
+        print("blue pixels sighted: " + str(blue_pixels_top[1].size))
         if abs(cx - center_x) < tolerance:
             left_motor.run(2)
             right_motor.run(2)
@@ -296,7 +321,7 @@ def going_to_charching():
     width = yellow_mask_bottom.shape[1] # the width of the original image
     center_x = width // 2 # center of the image
     tolerance = width // 10  # 10% of image width
-    print(yellow_pixels[1].size)
+    print("yellow pixels sighted: " + str(yellow_pixels[1].size))
     if abs(cx - center_x) < tolerance:
         left_motor.run(3)
         right_motor.run(3)
@@ -324,7 +349,6 @@ def going_to_trash_cube():
         right_motor.run(-1)
         return
     if brown_pixels[1].size > 3400:
-        print("skibidi")
         for i in range(10):
             left_motor.run(5)
             right_motor.run(5)
@@ -335,7 +359,7 @@ def going_to_trash_cube():
         width = brown_mask_bottom.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(brown_pixels[1].size)
+        print("brown pixels sighted: " + str(brown_pixels[1].size))
         if abs(cx - center_x) < tolerance:
             left_motor.run(3)
             right_motor.run(3)
@@ -377,7 +401,7 @@ def going_to_compressed_cube():
         width = black_mask_top.shape[1] # the width of the original image
         center_x = width // 2 # center of the image
         tolerance = width // 10  # 10% of image width
-        print(black_pixels_top[1].size)
+        print("Black pixels sighted: " + str(black_pixels_top[1].size))
         if abs(cx - center_x) < tolerance:
             left_motor.run(1)
             right_motor.run(1)
@@ -460,114 +484,61 @@ def going_to_small_black_cube():
 sim.startSimulation()
 time.sleep(0.5)
 
-
-
-# MAIN LOOP
-while True:
-    '''
-    # Get battery level
-    if going_to_trash_cube() == True:
-        right_motor.run(0)
-        left_motor.run(0)
-        robot.compress()
-        for i in range(10):
-            right_motor.run(5)
-            left_motor.run(5)
-        turn_of_180()
-        
-        while not going_to_small_black_cube():
-            print("going compressed cube")
-            going_to_small_black_cube()
-        while True:
-                print("going to container")
-                if going_to_red_container() == True:
-                    print("Hello")
+try:
+    print("---Staring the sorting---")
+    # MAIN LOOP
+    while True:
+        if robot.get_battery() >= 0.40:
+            bottom_frame = get_image_bottom()
+            found_bottom, green_mask_bottom = find_color_green(bottom_frame)
+            if not found_bottom:
+                if going_to_trash_cube():
+                    right_motor.run(0)
+                    left_motor.run(0)
+                    robot.compress()
                     for i in range(10):
-                        right_motor.run(-5)
-                        left_motor.run(-5)
-                    break
-                else:
-                    while not going_to_red_container:
-                        going_to_red_container()    
-            
-                
-    else:
-        while going_to_trash_cube() == False:
-            going_to_trash_cube()
-    '''        
-            
-    print(f"Battery: {robot.get_battery():.2f}")
-    '''
-    #getting image top and bottom
-    image_top = get_image_top()
-    image_bottom = get_image_bottom()
-    
-    #
-    found_bottom, masked_bottom = get_masked_image(image_bottom, "red")
-    found_top, masked_top = get_masked_image(image_top, "red")
-
-    #opening the camera view
-    get_camera_views(image_top, masked_bottom)
-    
-    #stopping the loop
-    if cv2.waitKey(1) == ord("q"):
-        break
-    cv2.waitKey(1)
-    '''
-    
-    if robot.get_battery() >= 0.90:
-        bottom_frame = get_image_bottom()
-        found_bottom, green_mask_bottom = find_color_green(bottom_frame)
-        if not found_bottom:
-            if going_to_trash_cube() == True:
-                right_motor.run(0)
-                left_motor.run(0)
-                robot.compress()
-                for i in range(10):
-                    right_motor.run(5)
-                    left_motor.run(5)
-                turn_of_180()
-                
-                while not going_to_small_black_cube():
-                    print("going compressed cube")
-                    going_to_small_black_cube()
+                        right_motor.run(5)
+                        left_motor.run(5)
+                    turn_of_180()
                     
-                while True:
-                        print("going to container")
-                        if going_to_red_container() == True:
-                            print("Hello")
-                            for i in range(10):
-                                right_motor.run(-5)
-                                left_motor.run(-5)
-                            break
-                        else:
-                            while not going_to_red_container:
-                                going_to_red_container()    
+                    while not going_to_small_black_cube():
+                        going_to_small_black_cube()
+                        
+                    while True:
+                            if going_to_red_container():
+                                print("compressed cube brought to destination!")
+                                for i in range(10):
+                                    right_motor.run(-5)
+                                    left_motor.run(-5)
+                                break
+                            else:
+                                while not going_to_red_container:
+                                    going_to_red_container()    
+                else:
+                    while not going_to_trash_cube():
+                        going_to_trash_cube()
             else:
-                while going_to_trash_cube() == False:
-                    going_to_trash_cube()
-        else:
-            while going_to_green_cube() == False:
-                going_to_green_cube()
-            
-            if going_to_blue_container == True:
-                right_motor.run(0)
-                left_motor.run(0)
+                while not going_to_green_cube():
+                    going_to_green_cube()
                 
-            else:
-                while going_to_blue_container == False:
-                    going_to_blue_container()
+                if going_to_blue_container():
+                    right_motor.run(0)
+                    left_motor.run(0)
+                    
+                else:
+                    while not going_to_blue_container():
+                        going_to_blue_container()
+            
+        else:
+            while robot.get_battery() != 1.0:
+                coordinates_charching = getting_coordinates_relative_to_robot("/Charging_Pad")
+                if coordinates_charching > 0.29:
+                    going_to_charching()
+                else:
+                    left_motor.run(0)
+                    right_motor.run(0)
+                    break
         
-    else:
-        while robot.get_battery != 1.0:
-            coordinates_charching = getting_coordinates_relative_to_robot("/Charging_Pad")
-            if coordinates_charching > 0.29:
-                going_to_charching()
-            else:
-                left_motor.run(0)
-                right_motor.run(0)
-                break
+except Exception as e:
+    print("Exception in main loop:", e)     
     
-    
-    
-  
