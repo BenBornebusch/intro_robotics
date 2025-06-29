@@ -18,7 +18,6 @@ small_image_sensor = ImageSensor(sim, DeviceNames.SMALL_IMAGE_SENSOR_OS)
 left_motor = Motor(sim, DeviceNames.MOTOR_LEFT_OS, Direction.CLOCKWISE)
 right_motor = Motor(sim, DeviceNames.MOTOR_RIGHT_OS, Direction.CLOCKWISE)
 
-
 #CONVERTING THE RAW_IMAGE AND RESOLUTION TO AN 
 def convert_image(raw_image, resolution):
     # Convert float list (range 0.0–1.0) to uint8 (range 0–255)
@@ -33,6 +32,11 @@ def convert_image(raw_image, resolution):
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)#flipping color for cv2
 
     return img
+
+def they_see_me_rolling():
+    left_motor.run(3)
+    right_motor.run(3)
+    
 
 def get_masked_image(frame, color):
     func_name = f"find_color_{color}"
@@ -117,48 +121,36 @@ def find_color_blue(frame):
         return True, result
     else:
         return False, result
-'''
-def find_color_red(frame):
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    RED_LOWER = np.array([0, 100, 100])
-    RED_UPPER = np.array([10, 255, 255])
-
-
-    mask = cv2.inRange(hsv, RED_LOWER, RED_UPPER)
-    result = cv2.bitwise_and(frame, frame, mask=mask)
- 
-    if np.any(mask > 0):
-        return True, result
-    else:
-        return False, result
-'''    
 
 def find_color_red(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
-    lower_red1 = np.array([0, 150, 120])
+    # Red mask (two ranges, higher sat/value)
+    lower_red1 = np.array([0, 180, 120])
     upper_red1 = np.array([10, 255, 255])
-
-    lower_red2 = np.array([170, 150, 120])
+    lower_red2 = np.array([170, 180, 120])
     upper_red2 = np.array([180, 255, 255])
 
     mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
     mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+    red_mask = cv2.bitwise_or(mask1, mask2)
 
-    mask = cv2.bitwise_or(mask1, mask2)
-    result = cv2.bitwise_and(frame, frame, mask=mask)
+    # Brown mask (wider value range)
+    BROWN_LOWER = np.array([8, 80, 20])
+    BROWN_UPPER = np.array([25, 255, 220])
+    brown_mask = cv2.inRange(hsv, BROWN_LOWER, BROWN_UPPER)
 
-    if np.any(mask > 0):
+    # Subtract brown from red
+    red_mask_clean = cv2.bitwise_and(red_mask, cv2.bitwise_not(brown_mask))
+    result = cv2.bitwise_and(frame, frame, mask=red_mask_clean)
+
+    if np.any(red_mask_clean > 0):
         return True, result
     else:
         return False, result
 
 def find_color_brown(frame):
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    '''
-    BROWN_LOWER = np.array([10, 80, 50]) #sadly it recognizes the charging thingy
-    BROWN_UPPER = np.array([30, 255, 200])
-    '''
     
     BROWN_LOWER = np.array([10, 150, 50])
     BROWN_UPPER = np.array([25, 255, 150])
@@ -201,11 +193,9 @@ def going_to_green_cube():
     
     # Find the horizontal (x) positions of yellow pixels
     green_pixels = np.where(cv2.cvtColor(green_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
-    if green_pixels[1].size > 3300:
-        print("skibidi")
-        for i in range(5):
-            left_motor.run(1)
-            right_motor.run(1)
+    if green_pixels[1].size > 4095:
+        for i in range(15):
+            they_see_me_rolling()
         return True
     else:
         # Use the mean x position of yellow pixels to estimate the center
@@ -215,8 +205,7 @@ def going_to_green_cube():
         tolerance = width // 10  # 10% of image width
         print("green pixels sighted: " + str(green_pixels[1].size))
         if abs(cx - center_x) < tolerance:
-            left_motor.run(2)
-            right_motor.run(2)
+            they_see_me_rolling()
             
         elif cx < center_x:
             left_motor.run(0.5)
@@ -238,7 +227,7 @@ def going_to_red_container():
         right_motor.run(-1)
         return
     
-    # Find the horizontal (x) positions of yellow pixels
+   
     red_pixels_bottom = np.where(cv2.cvtColor(red_mask_bottom, cv2.COLOR_BGR2GRAY) > 0)
     red_pixels_top = np.where(cv2.cvtColor(red_mask_top, cv2.COLOR_BGR2GRAY) > 0)
     
@@ -252,8 +241,7 @@ def going_to_red_container():
         tolerance = width // 10  # 10% of image width
         print("red pixels sighted: " + str(red_pixels_top[1].size))
         if abs(cx - center_x) < tolerance:
-            left_motor.run(3)
-            right_motor.run(3)
+            they_see_me_rolling()
             
         elif cx < center_x:
             left_motor.run(0.5)
@@ -289,8 +277,7 @@ def going_to_blue_container():
         tolerance = width // 10  # 10% of image width
         print("blue pixels sighted: " + str(blue_pixels_top[1].size))
         if abs(cx - center_x) < tolerance:
-            left_motor.run(2)
-            right_motor.run(2)
+            they_see_me_rolling()
             
         elif cx < center_x:
             left_motor.run(0.5)
@@ -323,8 +310,7 @@ def going_to_charching():
     tolerance = width // 10  # 10% of image width
     print("yellow pixels sighted: " + str(yellow_pixels[1].size))
     if abs(cx - center_x) < tolerance:
-        left_motor.run(3)
-        right_motor.run(3)
+        they_see_me_rolling()
             
     elif cx < center_x:
         left_motor.run(0.5)
@@ -361,8 +347,7 @@ def going_to_trash_cube():
         tolerance = width // 10  # 10% of image width
         print("brown pixels sighted: " + str(brown_pixels[1].size))
         if abs(cx - center_x) < tolerance:
-            left_motor.run(3)
-            right_motor.run(3)
+            they_see_me_rolling()
             
         elif cx < center_x:
             left_motor.run(0.5)
@@ -403,8 +388,7 @@ def going_to_compressed_cube():
         tolerance = width // 10  # 10% of image width
         print("Black pixels sighted: " + str(black_pixels_top[1].size))
         if abs(cx - center_x) < tolerance:
-            left_motor.run(1)
-            right_motor.run(1)
+            they_see_me_rolling()
             
         elif cx < center_x:
             left_motor.run(0.25)
@@ -426,6 +410,7 @@ def getting_coordinates_relative_to_robot(object):
         
     distance = math.sqrt((pos_ob[0]-pos_robot[0])**2 + (pos_ob[1]-pos_robot[1])**2)
     return distance
+
 
 def get_camera_views(frame_a, frame_b):
     combined = np.hstack((frame_a, frame_b))
@@ -462,8 +447,7 @@ def going_to_small_black_cube():
         tolerance = width // 10
         print("Black pixels:", black_pixels[1].size)
         if abs(cx - center_x) < tolerance:
-            left_motor.run(1)
-            right_motor.run(1)
+            they_see_me_rolling()
         elif cx < center_x:
             left_motor.run(0.5)
             right_motor.run(1)
@@ -480,6 +464,24 @@ def going_to_small_black_cube():
         right_motor.run(-1)
         return False
 
+def turn_360_and_look_for_green():
+    steps = 60  # Number of increments for a full rotation (adjust as needed)
+    for i in range(steps):
+        bottom_frame = get_image_bottom()
+        found_green, _ = find_color_green(bottom_frame)
+        if found_green:
+            left_motor.run(0)
+            right_motor.run(0)
+            print("Green box found during 360° turn")
+            return True
+        left_motor.run(2)
+        right_motor.run(-2)
+        time.sleep(0.05)  # Small delay for each step
+    left_motor.run(0)
+    right_motor.run(0)
+    print("No green box found after 360° turn")
+    return False
+
 # Starts simulation
 sim.startSimulation()
 time.sleep(0.5)
@@ -487,11 +489,9 @@ time.sleep(0.5)
 try:
     print("---Staring the sorting---")
     # MAIN LOOP
-    while True:
+    while True: 
         if robot.get_battery() >= 0.40:
-            bottom_frame = get_image_bottom()
-            found_bottom, green_mask_bottom = find_color_green(bottom_frame)
-            if not found_bottom:
+            if not turn_360_and_look_for_green():
                 if going_to_trash_cube():
                     right_motor.run(0)
                     left_motor.run(0)
@@ -504,12 +504,14 @@ try:
                     while not going_to_small_black_cube():
                         going_to_small_black_cube()
                         
+                    
                     while True:
                             if going_to_red_container():
                                 print("compressed cube brought to destination!")
-                                for i in range(10):
-                                    right_motor.run(-5)
-                                    left_motor.run(-5)
+                                for i in range(20):
+                                    right_motor.run(-10)
+                                    left_motor.run(-10)
+                                turn_of_180()
                                 break
                             else:
                                 while not going_to_red_container:
@@ -517,13 +519,42 @@ try:
                 else:
                     while not going_to_trash_cube():
                         going_to_trash_cube()
+                    
+                    if going_to_trash_cube():
+                        right_motor.run(0)
+                        left_motor.run(0)
+                        robot.compress()
+                        for i in range(10):
+                            right_motor.run(5)
+                            left_motor.run(5)
+                        turn_of_180()
+                        
+                        while not going_to_small_black_cube():
+                            going_to_small_black_cube()
+   
+                            
+                        while True:
+                                if going_to_red_container():
+                                    print("compressed cube brought to destination!")
+                                    for i in range(20):
+                                        right_motor.run(-10)
+                                        left_motor.run(-10)
+                                    turn_of_180()
+                                    break
+                                else:
+                                    while not going_to_red_container:
+                                        going_to_red_container()
             else:
                 while not going_to_green_cube():
                     going_to_green_cube()
                 
                 if going_to_blue_container():
-                    right_motor.run(0)
-                    left_motor.run(0)
+                    print("green cube brought to destination!")
+                    for i in range(20):
+                        right_motor.run(-10)
+                        left_motor.run(-10)
+                    turn_of_180()
+                    break
                     
                 else:
                     while not going_to_blue_container():
@@ -539,6 +570,7 @@ try:
                     right_motor.run(0)
                     break
         
+            
 except Exception as e:
     print("Exception in main loop:", e)     
     
